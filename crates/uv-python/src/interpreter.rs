@@ -1067,8 +1067,27 @@ impl InterpreterInfo {
             // invalidate the cache (e.g.) on OS upgrades.
             cache_digest(&(
                 ARCH,
-                sys_info::os_type().unwrap_or_default(),
-                sys_info::os_release().unwrap_or_default(),
+                #[cfg(target_os = "aix")]
+                {
+                    "AIX"
+                },
+                #[cfg(not(target_os = "aix"))]
+                {
+                    sys_info::os_type().unwrap_or_default()
+                },
+                #[cfg(target_os = "aix")]
+                {
+                    match Command::new("oslevel").arg("-s").output() {
+                        Ok(output) if output.status.success() => {
+                            String::from_utf8_lossy(&output.stdout).trim().to_string()
+                        }
+                        _ => String::new(),
+                    }
+                },
+                #[cfg(not(target_os = "aix"))]
+                {
+                    sys_info::os_release().unwrap_or_default()
+                },
             )),
             // We use the absolute path for the cache entry to avoid cache collisions for relative
             // paths. But we don't want to query the executable with symbolic links resolved because
